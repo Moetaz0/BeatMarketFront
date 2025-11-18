@@ -100,7 +100,7 @@
 <script setup>
 import { ref } from 'vue'
 
-const email = ref('someone@gmail.com')
+const email = ref('')
 const password = ref('')
 const remember = ref(false)
 
