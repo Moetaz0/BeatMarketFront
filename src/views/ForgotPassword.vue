@@ -13,9 +13,13 @@
       <div class="flex-none w-full max-w-[440px] z-20 mt-12 lg:mt-12 ml-0 lg:ml-12">
         <div class="relative bg-[rgba(20,0,0,0.88)] backdrop-blur-xl rounded-2xl p-12 shadow-[0_25px_60px_rgba(0,0,0,0.8)] border border-[rgba(120,10,10,0.25)]">
           <!-- Back to Login -->
-          <router-link to="/login" class="absolute top-4 right-4 text-sm text-red-300 hover:text-red-100 hover:underline transition">
-            Back to Login
-          </router-link>
+           <a
+            href="#"
+            @click.prevent="$emit('switch', 'login')"
+            class="absolute top-4 right-4 text-sm text-red-300 hover:text-red-100 hover:underline"
+          >
+            Back To Login
+          </a>
 
           <h1 class="text-white text-3xl text-center mb-2">Forgot Password</h1>
           <p class="text-red-300 text-sm leading-6 text-center mb-10">
