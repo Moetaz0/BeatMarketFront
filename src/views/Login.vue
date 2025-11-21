@@ -12,6 +12,7 @@
 
     <!-- Main layout: form left + guitar right -->
     <div class="flex flex-col lg:flex-row items-center justify-between min-h-screen px-6 lg:px-20 max-w-[1900px] mx-auto w-full">
+      
       <!-- Left: Form -->
       <div class="flex-none w-full max-w-[440px] z-20 mt-12 lg:mt-12 ml-0 lg:ml-12">
         <div
@@ -19,22 +20,20 @@
         >
           <!-- top-right link -->
           <a
-  href="#"
-  @click.prevent="$emit('switch', 'signup')"
-  class="absolute top-4 right-4 text-sm text-red-300 hover:text-red-100 hover:underline"
->
-  Don't have an account?
-</a>
-
-
+            href="#"
+            @click.prevent="$emit('switch', 'signup')"
+            class="absolute top-4 right-4 text-sm text-red-300 hover:text-red-100 hover:underline"
+          >
+            Don't have an account?
+          </a>
 
           <h1 class="text-white text-3xl text-center mb-2">Welcome to BeatMarket</h1>
           <p class="text-red-300 text-sm leading-6 text-center mb-10">
-            Login to your account to see and choose your<br />favorite musical instrument from BeatMarket.
+            Login to your account to see and choose your<br />
+            favorite musical instrument from BeatMarket.
           </p>
 
           <form @submit.prevent="login">
-            
 
             <div class="mb-4">
               <input
@@ -78,7 +77,9 @@
               <span class="text-red-300 select-none">Remember Me</span>
             </label>
 
-            <a href="#" @click.prevent="$emit('switch', 'forgot')" class="text-red-400 hover:underline">Forgot Password?</a>
+            <a href="#" @click.prevent="$emit('switch', 'forgot')" class="text-red-400 hover:underline">
+              Forgot Password?
+            </a>
           </div>
         </div>
       </div>
@@ -98,13 +99,37 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref } from "vue";
+import authService from "../services/authService"; // adjust path if needed
 
-const email = ref('')
-const password = ref('')
-const remember = ref(false)
+const email = ref("");
+const password = ref("");
+const remember = ref(false);
 
-const login = () => {
-  alert(`Logging in as ${email.value}`)
-}
+const login = async () => {
+  try {
+    const response = await authService.login({
+      email: email.value,
+      password: password.value
+    });
+
+    console.log("Login success:", response.data);
+
+    // Save token
+    if (remember.value) {
+      localStorage.setItem("token", response.data.token);
+    } else {
+      sessionStorage.setItem("token", response.data.token);
+    }
+
+    alert("Logged in successfully!");
+
+    // Redirect later if you add Vue Router
+    // router.push('/dashboard');
+
+  } catch (err) {
+    console.error("Login error:", err.response?.data || err.message);
+    alert("Email or password incorrect");
+  }
+};
 </script>

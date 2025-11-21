@@ -90,12 +90,30 @@
 
 <script setup>
 import { ref } from 'vue'
+import authService from '../services/authService' // adjust path if needed
 
 const name = ref('')
 const email = ref('')
 const password = ref('')
 
-const signup = () => {
-  alert(`Signing up: ${name.value}`)
+const signup = async () => {
+  try {
+    const response = await authService.register({
+      name: name.value,
+      email: email.value,
+      password: password.value
+    });
+
+    console.log("Signup successful:", response.data);
+
+    alert("Account created successfully!");
+
+    // Optional: auto-redirect to login form
+    // $emit("switch", "login");
+
+  } catch (err) {
+    console.error("Signup error:", err.response?.data || err.message);
+    alert("Signup failed. Email may already be used.");
+  }
 }
 </script>

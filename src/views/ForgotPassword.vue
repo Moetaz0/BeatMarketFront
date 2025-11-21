@@ -100,6 +100,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import authService from '../services/authService' // adjust path if needed
 
 const email = ref('')
 const showModal = ref(false)
@@ -110,13 +111,23 @@ const sendResetLink = async () => {
 
   isLoading.value = true
 
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 1400))
+  try {
+    // 🔥 Call your backend API
+    const response = await authService.forgot(email.value)
+    console.log("Reset email sent:", response.data)
+
+    // Show success modal
+    showModal.value = true
+
+  } catch (err) {
+    console.error("Forgot password error:", err.response?.data || err.message)
+    alert("This email is not registered.")
+  }
 
   isLoading.value = false
-  showModal.value = true
 }
 </script>
+
 
 <!-- Built-in Vue transition instead of custom keyframes (no more errors) -->
 <style scoped>
