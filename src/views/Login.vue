@@ -20,8 +20,7 @@
         >
           <!-- top-right link -->
           <a
-            href="#"
-            @click.prevent="$emit('switch', 'signup')"
+            href="/signup"
             class="absolute top-4 right-4 text-sm text-red-300 hover:text-red-100 hover:underline"
           >
             Don't have an account?
@@ -77,7 +76,7 @@
               <span class="text-red-300 select-none">Remember Me</span>
             </label>
 
-            <a href="#" @click.prevent="$emit('switch', 'forgot')" class="text-red-400 hover:underline">
+            <a href="/forgot-password" class="text-red-400 hover:underline">
               Forgot Password?
             </a>
           </div>

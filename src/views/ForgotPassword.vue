@@ -14,8 +14,7 @@
         <div class="relative bg-[rgba(20,0,0,0.88)] backdrop-blur-xl rounded-2xl p-12 shadow-[0_25px_60px_rgba(0,0,0,0.8)] border border-[rgba(120,10,10,0.25)]">
           <!-- Back to Login -->
            <a
-            href="#"
-            @click.prevent="$emit('switch', 'login')"
+            href='/login'
             class="absolute top-4 right-4 text-sm text-red-300 hover:text-red-100 hover:underline"
           >
             Back To Login

@@ -1,7 +1,10 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/api", // your Symfony server
+  baseURL: "https://127.0.0.1:8000", // your Symfony server
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 // Add JWT automatically to headers

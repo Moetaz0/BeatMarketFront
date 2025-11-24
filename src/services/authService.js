@@ -3,34 +3,39 @@ import api from "./api"; // <-- your axios instance
 export default {
   // REGISTER
   register(payload) {
-    return api.post("/auth/register", payload);
+    return api.post("/api/auth/register", payload);
   },
 
   // LOGIN
   login(payload) {
-    return api.post("/auth/login", payload);
+    return api.post("/api/auth/login", payload);
   },
 
   // REFRESH TOKEN
   refreshToken(refreshToken) {
-    return api.post("/auth/refresh", {
+    return api.post("/api/auth/refresh", {
       refresh_token: refreshToken,
     });
   },
 
   // FORGOT PASSWORD
   forgot(email) {
-    return api.post("/auth/forgot", { email });
+    return api.post("/api/auth/forgot", { email });
   },
 
   // RESET PASSWORD
   reset(payload) {
-    return api.post("/auth/reset", payload);
+    return api.post("/api/auth/reset", payload);
+  },
+
+  // VERIFY CODE
+  verify(code) {
+    return api.post("/api/auth/verify", { code });
   },
 
   // LOGOUT
   logout(refreshToken) {
-    return api.post("/auth/logout", {
+    return api.post("/api/auth/logout", {
       refresh_token: refreshToken,
     });
   },
