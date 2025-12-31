@@ -15,6 +15,7 @@ const routes = [
   { path: "/login", component: Login },
   { path: "/signup", component: SignUp },
   { path: "/forgot-password", component: ForgotPassword },
+  { path: "/home", component: () => import("../views/Home.vue") },
 ];
 
 const router = createRouter({

@@ -26,8 +26,7 @@
         >
           <!-- Back to Login -->
           <a
-            href="#"
-            @click.prevent="$emit('switch', 'login')"
+            href="/login"
             class="absolute top-4 right-4 text-sm text-red-300 hover:text-red-100 hover:underline"
           >
             Back To Login
@@ -45,10 +44,10 @@
                 inputmode="numeric"
                 placeholder="Verification Code"
                 @input="code = $event.target.value.replace(/[^0-9]/g, '')"
-                @Handlepaste.prevent="
-                  {
+                @paste.prevent="
+                  (e) => {
                     const pastedData = (
-                      event.clipboardData || window.clipboardData
+                      e.clipboardData || window.clipboardData
                     ).getData('text');
                     code = pastedData.replace(/[^0-9]/g, '');
                   }
@@ -159,9 +158,9 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import authService from "../services/authService";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { defineProps } from "vue";
 const props = defineProps({
   email: {
@@ -174,21 +173,39 @@ const code = ref("");
 const showModal = ref(false);
 const isLoading = ref(false);
 const route = useRoute();
-const email = route.state?.email; // Access email from router state
+const router = useRouter();
+// Prefer prop from router config, but fall back to query/params/state
+const email = computed(
+  () =>
+    props.email ||
+    route.query.email ||
+    route.params.email ||
+    route.state?.email ||
+    ""
+);
 const verifyCode = async () => {
-  if (!code.value || !email) return;
+  if (!code.value) {
+    alert("Please enter the verification code.");
+    return;
+  }
+  if (!email.value) {
+    alert(
+      "Missing email. Open the verification link from your email or return to Forgot Password."
+    );
+    return;
+  }
   isLoading.value = true;
 
   try {
     // Call authService.verify with email and code
     const response = await authService.verify({
-      email: email,
+      email: email.value,
       code: code.value,
     });
     console.log("Verify response:", response.data);
 
-    // Show success modal
-    showModal.value = true;
+    // Auto-redirect to login on successful verification
+    router.push("/login");
   } catch (err) {
     console.error("Verification error:", err.response?.data || err.message);
     alert(
@@ -202,10 +219,8 @@ const verifyCode = async () => {
 // Handle modal confirmation — emit an event so parent can navigate (optional)
 const onModalConfirm = () => {
   showModal.value = false;
-  // emit an event to parent to continue (e.g., show reset password form)
-  // if parent listens to 'verified' it can switch views; otherwise remove/comment next line
-  // Example: $emit is not available in script setup directly — use defineEmits
-  emitVerified();
+  // Navigate to login after successful verification
+  router.push("/login");
 };
 
 const emit = defineEmits(["verified"]);

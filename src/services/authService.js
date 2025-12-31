@@ -29,8 +29,9 @@ export default {
   },
 
   // VERIFY CODE
-  verify(code) {
-    return api.post("/api/auth/verify", { code });
+  verify(payload) {
+    // payload should contain { email, code }
+    return api.post("/api/auth/verify", payload);
   },
 
   // LOGOUT
