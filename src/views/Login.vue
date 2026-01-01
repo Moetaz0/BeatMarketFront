@@ -127,7 +127,9 @@ import SuccessToast from "@/components/SuccessToast.vue";
 import ErrorToast from "@/components/ErrorToast.vue";
 import { useRouter } from "vue-router";
 import { setTokens } from "@/utils/tokenStorage";
+import { useAuthStore } from "../../store";
 const router = useRouter();
+const authStore = useAuthStore();
 const showSuccess = ref(false);
 const successMessage = ref("");
 
@@ -143,27 +145,46 @@ const login = async () => {
     const response = await authService.login({
       email: email.value,
       password: password.value,
+      remember: remember.value,
     });
 
-    setTokens(
-      response.data.access_token,
-      response.data.refresh_token,
-      remember.value
-    );
+    console.log("Login response:", response);
+    console.log("Response data:", response.data);
+
+    const access =
+      response.data?.token ||
+      response.data?.access_token ||
+      response.data?.accessToken;
+    const refresh = response.data?.refresh_token || response.data?.refreshToken;
+
+    console.log("Extracted tokens:", {
+      access: access?.substring(0, 20),
+      refresh: refresh?.substring(0, 20),
+    });
+
+    if (access && refresh) {
+      console.log("Calling setTokens with remember:", remember.value);
+      setTokens(access, refresh, remember.value);
+      console.log("setTokens completed");
+
+      // Set minimal auth state to allow navigation
+      authStore.state.isAuthenticated = true;
+      authStore.setEmail(email.value);
+    }
 
     successMessage.value = "Login successful!";
     showSuccess.value = true;
-
-    router.push("/home");
-  } catch (err) {
-    console.error("Login error:", err.response?.data || err.message);
-
-    errorMessage.value = "Email or password incorrect.";
+    setTimeout(() => {
+      showSuccess.value = false;
+      router.push("/");
+    }, 1500);
+  } catch (error) {
+    errorMessage.value =
+      error.response?.data?.message || "Login failed. Please try again.";
     showError.value = true;
-
     setTimeout(() => {
       showError.value = false;
-    }, 2500);
+    }, 3000);
   }
 };
 </script>

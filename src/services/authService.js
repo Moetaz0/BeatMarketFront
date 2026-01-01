@@ -1,5 +1,6 @@
-import api from "./api"; // <-- your axios instance
-
+import api from "./api";
+import { getAccessToken } from "../utils/tokenStorage";
+import { h } from "vue";
 export default {
   // REGISTER
   register(payload) {
@@ -30,7 +31,6 @@ export default {
 
   // VERIFY CODE
   verify(payload) {
-    // payload should contain { email, code }
     return api.post("/api/auth/verify", payload);
   },
 
@@ -39,5 +39,41 @@ export default {
     return api.post("/api/auth/logout", {
       refresh_token: refreshToken,
     });
+  },
+
+  // GET USER PROFILE
+  getProfile() {
+    return api.get("/api/user/profile");
+  },
+
+  // UPDATE USER SETTINGS
+  updateSettings(payload) {
+    // Try PUT directly with FormData (some backends support this)
+    return api.put("/api/user/settings", payload);
+  },
+
+  // CHANGE PASSWORD
+  changePassword(payload) {
+    return api.put("/api/user/security/password", payload);
+  },
+
+  // CHANGE EMAIL
+  changeEmail(payload) {
+    return api.put("/api/user/security/email", payload);
+  },
+
+  // VERIFY EMAIL CHANGE
+  verifyEmailChange(payload) {
+    return api.post("/api/user/security/email/verify", payload);
+  },
+
+  // DELETE ACCOUNT
+  deleteAccount(payload) {
+    return api.delete("/api/user/account", { data: payload });
+  },
+
+  // GET SECURITY OVERVIEW
+  getSecurityOverview() {
+    return api.get("/api/user/security");
   },
 };
