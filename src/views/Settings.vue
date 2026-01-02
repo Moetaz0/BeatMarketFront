@@ -493,11 +493,6 @@ const deleteForm = ref({
   confirmation: "",
 });
 
-const getUserInitial = computed(() => {
-  const name = profileForm.value.username || "U";
-  return name.charAt(0).toUpperCase();
-});
-
 const handleFileSelect = (event) => {
   const file = event.target.files[0];
   if (!file) return;
@@ -526,13 +521,27 @@ const handleFileSelect = (event) => {
   reader.readAsDataURL(file);
 };
 
-const removeProfilePicture = () => {
-  profilePicturePreview.value = "";
-  selectedFileName.value = "";
-  profilePictureFile.value = null;
-  profileForm.value.profilePicture = "";
-  if (fileInput.value) {
-    fileInput.value.value = "";
+const removeProfilePicture = async () => {
+  try {
+    // If there's a saved profile picture, delete it from backend
+    if (profileForm.value.profilePicture) {
+      await authService.deleteProfilePicture();
+      console.log("Profile picture deleted from server");
+    }
+
+    // Clear local state
+    profilePicturePreview.value = "";
+    selectedFileName.value = "";
+    profilePictureFile.value = null;
+    profileForm.value.profilePicture = "";
+    if (fileInput.value) {
+      fileInput.value.value = "";
+    }
+
+    showSuccessMessage("Profile picture removed");
+  } catch (err) {
+    console.error("Failed to remove profile picture:", err);
+    showErrorMessage("Failed to remove profile picture");
   }
 };
 
@@ -561,20 +570,36 @@ const loadProfile = async () => {
 const updateProfile = async () => {
   isLoading.value = true;
   try {
-    // Prepare form data for file upload
-    const formData = new FormData();
-    formData.append("username", profileForm.value.username);
-    formData.append("phone", profileForm.value.phone || "");
-
-    // If a new file was selected, append it
+    // First, upload profile picture if a new file was selected
     if (profilePictureFile.value) {
-      formData.append("profilePicture", profilePictureFile.value);
-    } else if (profilePicturePreview.value) {
-      // Keep existing URL if no new file
-      formData.append("profilePictureUrl", profileForm.value.profilePicture);
+      console.log("Uploading profile picture:", profilePictureFile.value.name);
+      const uploadResponse = await authService.uploadProfilePicture(
+        profilePictureFile.value
+      );
+      console.log("Profile picture uploaded:", uploadResponse.data);
+
+      // Update local state with new picture URL
+      if (uploadResponse.data.profilePicture) {
+        profileForm.value.profilePicture = uploadResponse.data.profilePicture;
+        profilePicturePreview.value = uploadResponse.data.profilePicture;
+      }
+
+      // Clear the file input after successful upload
+      profilePictureFile.value = null;
+      selectedFileName.value = "";
+      if (fileInput.value) {
+        fileInput.value.value = "";
+      }
     }
 
-    await authService.updateSettings(formData);
+    // Update other profile settings (username, phone)
+    const payload = {
+      username: profileForm.value.username || "",
+      phone: profileForm.value.phone || "",
+    };
+    console.log("Updating profile settings:", payload);
+
+    await authService.updateSettings(payload);
 
     // Update store
     authStore.setUser({

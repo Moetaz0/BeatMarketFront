@@ -155,6 +155,7 @@ const login = async () => {
       response.data?.token ||
       response.data?.access_token ||
       response.data?.accessToken;
+    console.log("Extracted access token:", access);
     const refresh = response.data?.refresh_token || response.data?.refreshToken;
 
     console.log("Extracted tokens:", {
@@ -176,7 +177,13 @@ const login = async () => {
     showSuccess.value = true;
     setTimeout(() => {
       showSuccess.value = false;
-      router.push("/");
+      // Check if user is coming from verification and profile is incomplete
+      // If so, go to complete-profile, otherwise go home
+      const redirectTo = sessionStorage.getItem("fromVerification")
+        ? "/complete-profile"
+        : "/";
+      sessionStorage.removeItem("fromVerification");
+      router.push(redirectTo);
     }, 1500);
   } catch (error) {
     errorMessage.value =

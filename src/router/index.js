@@ -10,6 +10,7 @@ import Settings from "../views/Settings.vue";
 import Privacy from "../views/Privacy.vue";
 import Terms from "../views/Terms.vue";
 import License from "../views/License.vue";
+import CompleteProfile from "../views/CompleteProfile.vue";
 // TODO: Create Upload.vue component
 // import Upload from "../views/Upload.vue";
 
@@ -17,6 +18,12 @@ const routes = [
   { path: "/", component: Home, name: "Home" },
   { path: "/login", component: Login, name: "Login" },
   { path: "/signup", component: SignUp, name: "SignUp" },
+  {
+    path: "/complete-profile",
+    component: CompleteProfile,
+    name: "CompleteProfile",
+    meta: { requiresAuth: true },
+  },
   // Temporary placeholder for upload route until component is created
   {
     path: "/upload",

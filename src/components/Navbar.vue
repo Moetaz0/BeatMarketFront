@@ -131,11 +131,13 @@
             </div>
           </div>
 
-          <router-link
-            to="/upload"
+          <button
+            @click="handleStartSelling"
             class="hidden md:flex items-center gap-2 bg-red-600 hover:bg-red-700 px-6 py-2 rounded-full font-medium text-white transition"
           >
-            Start Selling
+            {{
+              authStore.isAuthenticated.value ? "Upload Beat" : "Start Selling"
+            }}
             <svg
               class="w-4 h-4"
               fill="none"
@@ -149,7 +151,7 @@
                 d="M13 10V3L4 14h7v7l9-11h-7z"
               />
             </svg>
-          </router-link>
+          </button>
           <button class="text-gray-300 hover:text-white transition">
             <svg
               class="w-6 h-6"
@@ -179,6 +181,8 @@ import { useAuthStore } from "../../store";
 const authStore = useAuthStore();
 const router = useRouter();
 const isDropdownOpen = ref(false);
+
+const emit = defineEmits(["openUploadModal"]);
 
 // Random avatar selection - persists for the session (same as Settings)
 const getRandomAvatar = () => {
@@ -221,6 +225,14 @@ const handleLogout = () => {
   authStore.logout();
   closeDropdown();
   router.push("/");
+};
+
+const handleStartSelling = () => {
+  if (authStore.isAuthenticated.value) {
+    emit("openUploadModal");
+  } else {
+    router.push("/login");
+  }
 };
 
 // Close dropdown when clicking outside

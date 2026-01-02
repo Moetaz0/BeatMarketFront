@@ -117,7 +117,7 @@ const signup = async () => {
       email: email.value,
       password: password.value,
     });
-    router.push({ name: "verify", query: { email: email.value } });
+    router.push({ name: "Verify", query: { email: email.value } });
 
     console.log("Signup successful:", response.data);
   } catch (err) {

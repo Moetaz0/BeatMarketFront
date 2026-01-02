@@ -140,8 +140,8 @@
               Code Verified
             </h3>
             <p class="text-red-200 text-center leading-relaxed">
-              Your verification code was accepted.<br />
-              You can now proceed to reset your password.
+              Your email has been verified successfully!<br />
+              Please log in to continue to your profile.
             </p>
 
             <button
@@ -204,8 +204,17 @@ const verifyCode = async () => {
     });
     console.log("Verify response:", response.data);
 
-    // Auto-redirect to login on successful verification
-    router.push("/login");
+    // Email is now verified - set flag for login to redirect to complete-profile
+    sessionStorage.setItem("fromVerification", "true");
+
+    // Show success modal
+    showModal.value = true;
+
+    // Redirect to login after modal
+    setTimeout(() => {
+      console.log("Redirecting to login");
+      router.push("/login");
+    }, 2500);
   } catch (err) {
     console.error("Verification error:", err.response?.data || err.message);
     alert(
@@ -216,11 +225,14 @@ const verifyCode = async () => {
   }
 };
 
-// Handle modal confirmation — emit an event so parent can navigate (optional)
+// Handle modal confirmation — navigate to login
 const onModalConfirm = () => {
   showModal.value = false;
-  // Navigate to login after successful verification
-  router.push("/login");
+  console.log("Modal confirm clicked - navigating to login");
+  // Navigate to login to get tokens
+  router.push("/login").catch((err) => {
+    console.error("Navigation error:", err);
+  });
 };
 
 const emit = defineEmits(["verified"]);

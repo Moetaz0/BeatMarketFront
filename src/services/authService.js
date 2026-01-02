@@ -48,8 +48,24 @@ export default {
 
   // UPDATE USER SETTINGS
   updateSettings(payload) {
-    // Try PUT directly with FormData (some backends support this)
     return api.put("/api/user/settings", payload);
+  },
+
+  // UPDATE USER ROLE AND PROFILE
+  completeProfile(payload) {
+    return api.put("/api/user/complete-profile", payload);
+  },
+
+  // UPLOAD PROFILE PICTURE
+  uploadProfilePicture(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post("/api/user/profile-picture", formData);
+  },
+
+  // DELETE PROFILE PICTURE
+  deleteProfilePicture() {
+    return api.delete("/api/user/profile-picture");
   },
 
   // CHANGE PASSWORD
