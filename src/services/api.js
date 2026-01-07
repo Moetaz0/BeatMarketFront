@@ -19,9 +19,36 @@ const api = axios.create({
 // Add JWT automatically to headers
 api.interceptors.request.use((config) => {
   // Let the browser set proper multipart boundaries for FormData
-  if (config.data instanceof FormData && config.headers) {
-    delete config.headers["Content-Type"];
-    delete config.headers["content-type"];
+  if (config.data instanceof FormData) {
+    try {
+      console.log(
+        "Request has FormData, cleaning Content-Type headers before send."
+      );
+      // Ensure headers object exists
+      config.headers = config.headers || {};
+      // Remove common header locations axios might use
+      try {
+        delete config.headers["Content-Type"];
+      } catch (e) {}
+      try {
+        delete config.headers["content-type"];
+      } catch (e) {}
+      try {
+        delete config.headers.common &&
+          delete config.headers.common["Content-Type"];
+      } catch (e) {}
+      try {
+        delete config.headers.post &&
+          delete config.headers.post["Content-Type"];
+      } catch (e) {}
+      // If using AxiosHeaders helper, set to undefined to allow browser to set boundary
+      config.headers["Content-Type"] = undefined;
+    } catch (e) {
+      console.warn(
+        "Failed to clear Content-Type header for FormData request",
+        e
+      );
+    }
   }
 
   const token = getAccessToken();

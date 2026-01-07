@@ -20,14 +20,14 @@
               >Feed</router-link
             >
             <router-link
+              to="/trending"
+              class="text-gray-300 hover:text-white transition"
+              >Trending</router-link
+            >
+            <router-link
               to="/tracks"
               class="text-gray-300 hover:text-white transition"
               >Tracks</router-link
-            >
-            <router-link
-              to="/musicians"
-              class="text-gray-300 hover:text-white transition"
-              >Musicians</router-link
             >
           </div>
         </div>
@@ -37,11 +37,14 @@
           <div class="relative w-full">
             <input
               type="text"
+              v-model="searchQuery"
+              @keyup.enter="handleSearch"
               placeholder="Try searching Trap or Sad or Juice Wrld..."
               class="w-full bg-gray-900 text-white placeholder-gray-500 border border-gray-700 rounded-full py-2 px-5 pl-10 focus:outline-none focus:border-red-500 transition"
             />
             <svg
-              class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500"
+              @click="handleSearch"
+              class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 cursor-pointer hover:text-gray-400 transition"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -109,18 +112,47 @@
                 </p>
               </div>
               <router-link
+                to="/my-beats"
+                class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                @click="closeDropdown"
+              >
+                My Beats
+              </router-link>
+              <router-link
+                to="/wallet"
+                class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                @click="closeDropdown"
+              >
+                Wallet
+              </router-link>
+              <router-link
+                to="/purchases"
+                class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                @click="closeDropdown"
+              >
+                My Purchases
+              </router-link>
+              <router-link
+                to="/transactions"
+                class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                @click="closeDropdown"
+              >
+                Transactions
+              </router-link>
+              <div class="border-b border-gray-700 my-1"></div>
+              <router-link
+                to="/support"
+                class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                @click="closeDropdown"
+              >
+                Support
+              </router-link>
+              <router-link
                 to="/settings"
                 class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
                 @click="closeDropdown"
               >
                 Settings
-              </router-link>
-              <router-link
-                to="/home"
-                class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
-                @click="closeDropdown"
-              >
-                My Beats
               </router-link>
               <button
                 @click="handleLogout"
@@ -152,7 +184,10 @@
               />
             </svg>
           </button>
-          <button class="text-gray-300 hover:text-white transition">
+          <button
+            @click="openCart"
+            class="relative text-gray-300 hover:text-white transition"
+          >
             <svg
               class="w-6 h-6"
               fill="none"
@@ -166,6 +201,13 @@
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
               />
             </svg>
+            <!-- Cart counter badge -->
+            <span
+              v-if="cartStore.cartCount.value > 0"
+              class="absolute -top-3 -right-3 bg-red-600 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-gray-950 shadow-lg"
+            >
+              {{ cartStore.cartCount.value }}
+            </span>
           </button>
         </div>
       </div>
@@ -176,11 +218,13 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { useAuthStore } from "../../store";
+import { useAuthStore, useCartStore } from "../../store";
 
 const authStore = useAuthStore();
+const cartStore = useCartStore();
 const router = useRouter();
 const isDropdownOpen = ref(false);
+const searchQuery = ref("");
 
 const emit = defineEmits(["openUploadModal"]);
 
@@ -221,10 +265,20 @@ const closeDropdown = () => {
   isDropdownOpen.value = false;
 };
 
+const handleSearch = () => {
+  if (searchQuery.value.trim()) {
+    router.push({
+      name: "Tracks",
+      query: { q: searchQuery.value.trim() },
+    });
+    searchQuery.value = "";
+  }
+};
+
 const handleLogout = () => {
   authStore.logout();
   closeDropdown();
-  router.push("/");
+  router.push("/login");
 };
 
 const handleStartSelling = () => {
@@ -233,6 +287,10 @@ const handleStartSelling = () => {
   } else {
     router.push("/login");
   }
+};
+
+const openCart = () => {
+  window.openCart();
 };
 
 // Close dropdown when clicking outside

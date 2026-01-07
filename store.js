@@ -33,6 +33,11 @@ const state = reactive({
   isAuthenticated: false,
 });
 
+// Cart state
+const cartState = reactive({
+  items: JSON.parse(localStorage.getItem("cart") || "[]"),
+});
+
 // Check if user is authenticated on load and restore user data
 const token = getAccessToken();
 if (token) {
@@ -79,5 +84,46 @@ export const useAuthStore = () => {
     logout,
     isAuthenticated,
     currentUser,
+  };
+};
+
+// Cart management
+export const useCartStore = () => {
+  const addToCart = (beat) => {
+    const existingItem = cartState.items.find((item) => item.id === beat.id);
+
+    if (!existingItem) {
+      cartState.items.push({
+        id: beat.id,
+        title: beat.title,
+        producer: beat.producer,
+        price: beat.price,
+        cover: beat.cover,
+        fileUrl: beat.fileUrl,
+        licenseName: beat.licenseName,
+        addedAt: new Date().toISOString(),
+      });
+      localStorage.setItem("cart", JSON.stringify(cartState.items));
+    }
+  };
+
+  const removeFromCart = (beatId) => {
+    cartState.items = cartState.items.filter((item) => item.id !== beatId);
+    localStorage.setItem("cart", JSON.stringify(cartState.items));
+  };
+
+  const isInCart = (beatId) => {
+    return cartState.items.some((item) => item.id === beatId);
+  };
+
+  const cartItems = computed(() => cartState.items);
+  const cartCount = computed(() => cartState.items.length);
+
+  return {
+    addToCart,
+    removeFromCart,
+    isInCart,
+    cartItems,
+    cartCount,
   };
 };

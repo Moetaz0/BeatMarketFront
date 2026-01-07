@@ -89,71 +89,6 @@
             </div>
 
             <form @submit.prevent="completeProfile" class="space-y-5">
-              <!-- Role Selection Section -->
-              <div>
-                <label
-                  class="block text-white font-bold text-xs mb-2 flex items-center gap-2"
-                >
-                  <span class="text-red-400">●</span>
-                  What's Your Role?
-                </label>
-                <div class="grid grid-cols-2 gap-3">
-                  <!-- Artist Button -->
-                  <button
-                    type="button"
-                    @click="selectedRole = 'ROLE_ARTIST'"
-                    :class="[
-                      'group relative py-4 px-3 rounded-2xl border-2 transition-all duration-300 text-center overflow-hidden',
-                      selectedRole === 'ROLE_ARTIST'
-                        ? 'border-red-600 bg-gradient-to-br from-red-600/20 to-red-700/10 shadow-[0_0_25px_rgba(220,38,38,0.35)]'
-                        : 'border-red-900/30 bg-[rgba(40,0,0,0.4)] hover:border-red-700 hover:bg-[rgba(50,0,0,0.6)]',
-                    ]"
-                  >
-                    <div
-                      class="absolute inset-0 bg-gradient-to-br from-red-600/0 to-red-600/0 group-hover:from-red-600/5 group-hover:to-red-600/10 transition duration-300"
-                    ></div>
-                    <div class="relative">
-                      <div
-                        class="text-3xl mb-1 transform group-hover:scale-110 transition duration-300"
-                      >
-                        🎤
-                      </div>
-                      <div class="text-white font-bold text-xs mb-0.5">
-                        Artist
-                      </div>
-                      <div class="text-xs text-gray-400">Looking for beats</div>
-                    </div>
-                  </button>
-
-                  <!-- Beatmaker Button -->
-                  <button
-                    type="button"
-                    @click="selectedRole = 'ROLE_BEATMAKER'"
-                    :class="[
-                      'group relative py-4 px-3 rounded-2xl border-2 transition-all duration-300 text-center overflow-hidden',
-                      selectedRole === 'ROLE_BEATMAKER'
-                        ? 'border-red-600 bg-gradient-to-br from-red-600/20 to-red-700/10 shadow-[0_0_25px_rgba(220,38,38,0.35)]'
-                        : 'border-red-900/30 bg-[rgba(40,0,0,0.4)] hover:border-red-700 hover:bg-[rgba(50,0,0,0.6)]',
-                    ]"
-                  >
-                    <div
-                      class="absolute inset-0 bg-gradient-to-br from-red-600/0 to-red-600/0 group-hover:from-red-600/5 group-hover:to-red-600/10 transition duration-300"
-                    ></div>
-                    <div class="relative">
-                      <div
-                        class="text-3xl mb-1 transform group-hover:scale-110 transition duration-300"
-                      >
-                        🎹
-                      </div>
-                      <div class="text-white font-bold text-xs mb-0.5">
-                        Beatmaker
-                      </div>
-                      <div class="text-xs text-gray-400">Selling beats</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
               <!-- Phone Number Section -->
               <div>
                 <label
@@ -276,7 +211,7 @@
                 <!-- Complete Profile Button -->
                 <button
                   type="submit"
-                  :disabled="isLoading || !selectedRole"
+                  :disabled="isLoading"
                   class="w-full py-2.5 px-3 bg-gradient-to-r from-red-700 to-red-800 hover:from-red-600 hover:to-red-700 disabled:from-gray-700 disabled:to-gray-800 text-white font-bold text-sm rounded-lg transition-all duration-300 shadow-lg shadow-red-600/30 hover:shadow-red-600/50 disabled:shadow-gray-600/20 transform hover:scale-105 active:scale-95 disabled:hover:scale-100 disabled:cursor-not-allowed"
                 >
                   <span
@@ -340,7 +275,6 @@ import { useAuthStore } from "../../store";
 const router = useRouter();
 const authStore = useAuthStore();
 
-const selectedRole = ref("");
 const phone = ref("");
 const profilePictureFile = ref(null);
 const profilePicturePreview = ref("");
@@ -410,11 +344,6 @@ const removeProfilePicture = () => {
 };
 
 const completeProfile = async () => {
-  if (!selectedRole.value) {
-    showErrorMessage("Please select your role");
-    return;
-  }
-
   isLoading.value = true;
   try {
     // Upload profile picture first if selected
@@ -426,9 +355,8 @@ const completeProfile = async () => {
       profilePictureUrl = uploadResponse.data.profilePicture || "";
     }
 
-    // Complete profile with role and phone using dedicated endpoint
+    // Complete profile with phone using dedicated endpoint
     const response = await authService.completeProfile({
-      userRole: selectedRole.value,
       phone: phone.value || "",
     });
 

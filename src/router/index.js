@@ -11,6 +11,11 @@ import Privacy from "../views/Privacy.vue";
 import Terms from "../views/Terms.vue";
 import License from "../views/License.vue";
 import CompleteProfile from "../views/CompleteProfile.vue";
+import Cart from "../views/Cart.vue";
+import Wallet from "../views/Wallet.vue";
+import Transactions from "../views/Transactions.vue";
+import Purchases from "../views/Purchases.vue";
+import Support from "../views/Support.vue";
 // TODO: Create Upload.vue component
 // import Upload from "../views/Upload.vue";
 
@@ -53,6 +58,17 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: "/trending",
+    name: "Trending",
+    component: () => import("../views/Trending.vue"),
+  },
+  {
+    path: "/my-beats",
+    name: "MyBeats",
+    component: () => import("../views/MyBeats.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
     path: "/musicians",
     component: Musicians,
     name: "Musicians",
@@ -67,6 +83,31 @@ const routes = [
   { path: "/privacy", component: Privacy, name: "Privacy" },
   { path: "/terms", component: Terms, name: "Terms" },
   { path: "/license", component: License, name: "License" },
+  { path: "/cart", component: Cart, name: "Cart" },
+  {
+    path: "/wallet",
+    component: Wallet,
+    name: "Wallet",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/transactions",
+    component: Transactions,
+    name: "Transactions",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/purchases",
+    component: Purchases,
+    name: "Purchases",
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/support",
+    component: Support,
+    name: "Support",
+    meta: { requiresAuth: true },
+  },
 ];
 
 const router = createRouter({
