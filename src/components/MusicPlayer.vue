@@ -191,6 +191,7 @@
 
               <!-- Add to Cart Button -->
               <button
+                v-show="!props.isYours"
                 @click="addToCart"
                 :class="[
                   'flex items-center justify-center w-9 h-9 rounded-full shadow-lg transition-all duration-300 hover:scale-110 active:scale-95 relative group',

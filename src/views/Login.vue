@@ -168,6 +168,12 @@ const login = async () => {
       setTokens(access, refresh, remember.value);
       console.log("setTokens completed");
 
+      // Store user role if available in response
+      if (response.data?.user?.role) {
+        const storage = remember.value ? localStorage : sessionStorage;
+        storage.setItem("user_role", response.data.user.role);
+      }
+
       // Set minimal auth state to allow navigation
       authStore.state.isAuthenticated = true;
       authStore.setEmail(email.value);

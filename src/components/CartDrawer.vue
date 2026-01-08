@@ -1,4 +1,11 @@
 <template>
+  <SuccessToast :message="successMessage" :show="showSuccess" />
+  <ErrorToast
+    :message="errorMessage"
+    :show="showError"
+    @close="showError = false"
+  />
+
   <!-- Cart Drawer Overlay -->
   <transition name="fade">
     <div
@@ -122,12 +129,22 @@
                   </svg>
                 </button>
               </div>
-              <span
-                v-if="item.licenseName"
-                class="text-xs bg-gradient-to-r from-slate-700/80 to-slate-600/60 text-gray-200 px-2.5 py-1 rounded-full inline-block font-medium"
+
+              <!-- License Dropdown -->
+              <select
+                :value="licenseSelections[item.id]?.id || ''"
+                @change="handleLicenseChange(item.id, $event)"
+                class="w-full mt-2 bg-gray-700 border border-gray-600 text-white rounded px-2 py-1 text-xs focus:outline-none focus:border-red-500 transition cursor-pointer"
               >
-                {{ item.licenseName }}
-              </span>
+                <option value="">-- Select License --</option>
+                <option
+                  v-for="license in licenses"
+                  :key="license.id"
+                  :value="license.id"
+                >
+                  {{ license.name }}
+                </option>
+              </select>
             </div>
           </div>
         </div>
@@ -167,13 +184,16 @@
 
         <button
           @click="checkout"
+          :disabled="isCheckingOut"
           class="w-full bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-500 hover:via-rose-500 hover:to-red-500 text-white font-bold py-3 rounded-xl transition-all duration-300 shadow-lg shadow-red-600/40 hover:shadow-red-500/50 hover:scale-105 active:scale-95 relative group overflow-hidden"
         >
           <div
             class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-full group-hover:translate-x-0 transition-transform duration-500"
           ></div>
           <span class="relative flex items-center justify-center gap-2">
-            <span>Proceed to Checkout</span>
+            <span>{{
+              isCheckingOut ? "Processing..." : "Proceed to Checkout"
+            }}</span>
             <svg
               class="w-4 h-4"
               fill="none"
@@ -199,11 +219,48 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useCartStore } from "../../store";
+import SuccessToast from "@/components/SuccessToast.vue";
+import ErrorToast from "@/components/ErrorToast.vue";
+import licenseService from "@/services/licenseService";
+import orderService from "@/services/orderService";
 
 const cartStore = useCartStore();
 const isOpen = ref(false);
+
+const showSuccess = ref(false);
+const successMessage = ref("");
+
+const showError = ref(false);
+const errorMessage = ref("");
+
+const isCheckingOut = ref(false);
+const licenses = ref([]);
+const licenseSelections = ref({}); // Map beatId -> license object
+const licensesLoaded = ref(false);
+
+const toastSuccess = (message) => {
+  successMessage.value = message;
+  showSuccess.value = false;
+  setTimeout(() => {
+    showSuccess.value = true;
+  }, 0);
+  setTimeout(() => {
+    showSuccess.value = false;
+  }, 3100);
+};
+
+const toastError = (message) => {
+  errorMessage.value = message;
+  showError.value = false;
+  setTimeout(() => {
+    showError.value = true;
+  }, 0);
+  setTimeout(() => {
+    showError.value = false;
+  }, 4000);
+};
 
 const subtotal = computed(() => {
   return cartStore.cartItems.value
@@ -217,6 +274,10 @@ const subtotal = computed(() => {
 const open = () => {
   isOpen.value = true;
   document.body.style.overflow = "hidden";
+  // Fetch licenses only when drawer opens
+  if (!licensesLoaded.value) {
+    fetchLicenses();
+  }
 };
 
 const close = () => {
@@ -232,8 +293,105 @@ const toggle = () => {
   }
 };
 
-const checkout = () => {
-  alert("Checkout coming soon! Total: $" + subtotal.value);
+const fetchLicenses = async () => {
+  if (licensesLoaded.value) return; // Prevent multiple fetches
+  licensesLoaded.value = true;
+  try {
+    const response = await licenseService.getAllLicenses();
+    licenses.value = response.data || response || [];
+  } catch (error) {
+    console.error("[fetchLicenses] failed", error);
+    licensesLoaded.value = false; // Reset on error so it can retry
+  }
+};
+
+onMounted(() => {
+  // Don't fetch on mount, only fetch when drawer opens
+});
+
+const handleLicenseChange = (beatId, event) => {
+  const licenseId = event.target.value;
+  if (!licenseId) {
+    delete licenseSelections.value[beatId];
+    return;
+  }
+
+  const selectedLicense = licenses.value.find(
+    (l) => l.id === parseInt(licenseId)
+  );
+  if (selectedLicense) {
+    licenseSelections.value[beatId] = selectedLicense;
+  }
+};
+
+const checkout = async () => {
+  if (isCheckingOut.value) return;
+
+  const itemsInCart = cartStore.cartItems.value;
+  if (!itemsInCart || itemsInCart.length === 0) {
+    toastError("Your cart is empty.");
+    return;
+  }
+
+  // Check if any items need license selection
+  const itemsNeedingLicense = itemsInCart.filter(
+    (item) => !licenseSelections.value[item.id]
+  );
+
+  if (itemsNeedingLicense.length > 0) {
+    toastError(
+      `Please select a license for: ${itemsNeedingLicense
+        .map((i) => i.title)
+        .join(", ")}`
+    );
+    return;
+  }
+
+  isCheckingOut.value = true;
+  try {
+    const items = itemsInCart.map((item) => ({
+      beatId: item.id,
+      quantity: item.quantity || 1,
+      licenseId: licenseSelections.value[item.id].id,
+      licenseName: licenseSelections.value[item.id].name,
+    }));
+
+    console.log("[checkout] sending items", items);
+
+    const result = await orderService.checkout(items);
+    toastSuccess(result?.message || "Checkout successful");
+    cartStore.clearCart();
+    licenseSelections.value = {}; // Reset selections after successful checkout
+    close();
+  } catch (error) {
+    const data = error?.response?.data;
+    console.error("[checkout] failed", {
+      status: error?.response?.status,
+      data,
+      message: error?.message,
+    });
+
+    const status = error?.response?.status;
+    let message =
+      data?.error || data?.message || error?.message || "Checkout failed";
+
+    if (status >= 500) {
+      message =
+        data?.error ||
+        "Server error while processing checkout. Please try again.";
+    }
+
+    if (
+      typeof data?.balance !== "undefined" &&
+      typeof data?.total !== "undefined"
+    ) {
+      message = `${message} (Balance: $${data.balance}, Total: $${data.total})`;
+    }
+
+    toastError(message);
+  } finally {
+    isCheckingOut.value = false;
+  }
 };
 
 // Expose methods

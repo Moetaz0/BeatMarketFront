@@ -341,39 +341,6 @@
                 </p>
               </div>
             </div>
-
-            <!-- License -->
-            <div>
-              <label class="block text-sm font-semibold text-gray-200 mb-3">
-                License Type (Optional)
-              </label>
-              <select
-                v-model="formData.licenseId"
-                class="w-full bg-gray-800/40 border border-white/10 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-red-500/50 focus:ring-2 focus:ring-red-500/20 transition-all duration-300 backdrop-blur-sm"
-              >
-                <option value="" class="bg-gray-900">
-                  No license selected
-                </option>
-                <option
-                  v-for="license in licenses"
-                  :key="license.id"
-                  :value="license.id"
-                  class="bg-gray-900"
-                >
-                  {{ license.name }}
-                </option>
-              </select>
-              <p
-                v-if="licenses.length === 0"
-                class="text-gray-400 text-xs mt-2"
-              >
-                {{
-                  loadingLicenses
-                    ? "Loading licenses..."
-                    : "No licenses available"
-                }}
-              </p>
-            </div>
           </div>
         </div>
       </div>
@@ -477,7 +444,6 @@
 <script setup>
 import { ref, onMounted, watch } from "vue";
 import beatService from "@/services/beatService";
-import licenseService from "@/services/licenseService";
 import { useAuthStore } from "../../store";
 
 const authStore = useAuthStore();
@@ -498,8 +464,6 @@ const emit = defineEmits(["close", "upload"]);
 const currentStep = ref(1);
 const isUploading = ref(false);
 const uploadSuccess = ref(false);
-const licenses = ref([]);
-const loadingLicenses = ref(false);
 const isEditMode = ref(false);
 const editingBeatId = ref(null);
 
@@ -513,7 +477,6 @@ const formData = ref({
   coverImagePreview: null,
   bpm: "",
   price: "",
-  licenseId: "",
 });
 
 const errors = ref({
@@ -632,7 +595,6 @@ const loadBeatData = async (beatId) => {
     formData.value.key = beat.key || "";
     formData.value.bpm = beat.bpm || "";
     formData.value.price = beat.price || "";
-    formData.value.licenseId = beat.licenseId || "";
 
     // Load cover image preview if available
     if (beat.coverImage) {
@@ -667,9 +629,6 @@ const submitForm = async () => {
       // Only include optional fields if provided
       if (formData.value.key) {
         updateData.key = formData.value.key;
-      }
-      if (formData.value.licenseId) {
-        updateData.licenseId = formData.value.licenseId;
       }
 
       // If a new cover image file was selected, upload it first (same as profile picture flow)
@@ -738,11 +697,6 @@ const submitForm = async () => {
 
       // NOTE: do NOT append cover image here. Create beat first, then upload
       // the cover to the per-beat endpoint `/api/beats/{id}/cover-image`.
-
-      // Append license if provided
-      if (formData.value.licenseId) {
-        formDataObj.append("licenseId", formData.value.licenseId);
-      }
 
       // Get userId from auth store
       const userId =
@@ -852,25 +806,8 @@ const resetForm = () => {
   uploadSuccess.value = false;
 };
 
-const fetchLicenses = async () => {
-  try {
-    loadingLicenses.value = true;
-    const response = await licenseService.getAllLicenses();
-    console.log("Licenses response:", response);
-
-    // Handle both array and object with 'data' property
-    licenses.value = Array.isArray(response) ? response : response.data || [];
-    console.log("Loaded licenses:", licenses.value);
-  } catch (error) {
-    console.error("Failed to fetch licenses:", error);
-    licenses.value = [];
-  } finally {
-    loadingLicenses.value = false;
-  }
-};
-
 onMounted(() => {
-  fetchLicenses();
+  // Component initialization
 });
 
 // Watch for beatData changes to load edit form

@@ -56,6 +56,7 @@
               v-for="beat in trendingBeats"
               :key="beat.id"
               v-bind="beat"
+              :isYours="beat.isOwned"
               @play="handlePlayBeat"
             />
           </div>
@@ -132,7 +133,7 @@
               v-for="beat in yourBeats"
               :key="beat.id"
               v-bind="beat"
-              isYours
+              :isYours="true"
               @play="handlePlayBeat"
               @edit="handleEditBeat"
             />
@@ -191,6 +192,7 @@ const currentPlaylist = ref([]);
 
 const yourBeats = ref([]);
 const trendingBeats = ref([]);
+const userBeatIds = ref(new Set()); // Track user's beat IDs for quick lookup
 
 // Music player functions
 const handlePlayBeat = async (beatData) => {
@@ -204,8 +206,9 @@ const handlePlayBeat = async (beatData) => {
       const currentUserId = authStore.currentUser.value?.id;
       const isOwned =
         fullBeat.userId === currentUserId ||
-        fullBeat.createdBy === currentUserId;
-      const isPurchased = fullBeat.isPurchased || false; // This should come from backend
+        fullBeat.createdBy === currentUserId ||
+        beatData.isOwned; // Use isOwned flag from beatData if available
+      const isPurchased = fullBeat.isPurchased || isOwned; // If owned, treat as purchased
 
       const beatToPlay = {
         id: fullBeat.id || beatData.id,
@@ -230,6 +233,8 @@ const handlePlayBeat = async (beatData) => {
         // Add purchase info (watermark is generated in frontend)
         isOwned: isOwned,
         isPurchased: isPurchased,
+        producerId:
+          fullBeat.userId || fullBeat.createdBy || beatData.producerId,
       };
 
       console.log("Setting current beat:", beatToPlay);
@@ -311,6 +316,13 @@ const fetchUserBeats = async () => {
 
     // Transform the API data to match the BeatCard component props
     const beats = response.data || [];
+
+    // Clear and populate userBeatIds set with user's beat IDs
+    userBeatIds.value.clear();
+    beats.forEach((beat) => {
+      userBeatIds.value.add(beat.id);
+    });
+
     const beatsWithViews = await Promise.allSettled(
       beats.map(async (beat) => {
         let views = "0";
@@ -360,6 +372,10 @@ const fetchTrending = async () => {
         } catch (err) {
           console.warn(`Failed to fetch views for beat ${beat.id}:`, err);
         }
+
+        // Check if beat belongs to current user by checking userBeatIds set
+        const isOwned = userBeatIds.value.has(beat.id);
+
         return {
           id: beat.id,
           title: beat.title,
@@ -378,6 +394,7 @@ const fetchTrending = async () => {
           fileUrl: beat.audioFileUrl || beat.audioFile || beat.fileUrl || "",
           licenseName: beat.license?.name || "",
           producerId: beat.userId || beat.producer?.id || beat.createdBy,
+          isOwned: isOwned,
         };
       })
     );
@@ -450,6 +467,11 @@ const fetchProfile = async () => {
     // Store userId for beat uploads
     if (data.id) {
       localStorage.setItem("userId", data.id);
+    }
+
+    // Store user role if available
+    if (data.role) {
+      localStorage.setItem("user_role", data.role);
     }
 
     authStore.setUser({

@@ -56,9 +56,27 @@
         </div>
       </div>
 
+      <!-- Loading Spinner -->
+      <div v-if="loading" class="text-center py-12">
+        <svg
+          class="w-8 h-8 animate-spin text-red-600 mx-auto"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+          />
+        </svg>
+        <p class="text-gray-400 mt-3">Loading transactions...</p>
+      </div>
+
       <!-- Transactions Table -->
       <div
-        v-if="filteredTransactions.length === 0"
+        v-else-if="filteredTransactions.length === 0"
         class="text-center py-12 bg-gray-900 rounded-lg border border-gray-800"
       >
         <svg
@@ -100,7 +118,7 @@
             </thead>
             <tbody>
               <tr
-                v-for="transaction in filteredTransactions"
+                v-for="transaction in paginatedTransactions"
                 :key="transaction.id"
                 class="border-b border-gray-800 hover:bg-gray-800/50 transition"
               >
@@ -160,8 +178,11 @@
         class="flex items-center justify-between mt-8"
       >
         <p class="text-sm text-gray-400">
-          Showing {{ currentPage * 10 - 9 }} to
-          {{ Math.min(currentPage * 10, filteredTransactions.length) }} of
+          Showing {{ currentPage * itemsPerPage - itemsPerPage + 1 }} to
+          {{
+            Math.min(currentPage * itemsPerPage, filteredTransactions.length)
+          }}
+          of
           {{ filteredTransactions.length }}
         </p>
         <div class="flex gap-2">
@@ -174,7 +195,9 @@
           </button>
           <button
             @click="currentPage = currentPage + 1"
-            :disabled="currentPage * 10 >= filteredTransactions.length"
+            :disabled="
+              currentPage * itemsPerPage >= filteredTransactions.length
+            "
             class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition"
           >
             Next
@@ -186,8 +209,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import Navbar from "@/components/Navbar.vue";
+import walletService from "@/services/walletService";
 
 const filters = ref({
   type: "",
@@ -196,89 +220,38 @@ const filters = ref({
 });
 
 const currentPage = ref(1);
+const loading = ref(true);
+const transactions = ref([]);
+const itemsPerPage = 10;
 
-const transactions = ref([
-  {
-    id: 1,
-    date: "2024-01-15",
-    type: "purchase",
-    typeLabel: "Purchase",
-    description: "Purchased Beat: Summer Vibes",
-    amount: "-$29.99",
-    status: "completed",
-    statusLabel: "Completed",
-  },
-  {
-    id: 2,
-    date: "2024-01-14",
-    type: "sale",
-    typeLabel: "Sale",
-    description: "License Sale: Hip Hop Beat",
-    amount: "+$45.00",
-    status: "completed",
-    statusLabel: "Completed",
-  },
-  {
-    id: 3,
-    date: "2024-01-13",
-    type: "deposit",
-    typeLabel: "Deposit",
-    description: "Added Funds via Stripe",
-    amount: "+$100.00",
-    status: "completed",
-    statusLabel: "Completed",
-  },
-  {
-    id: 4,
-    date: "2024-01-12",
-    type: "withdrawal",
-    typeLabel: "Withdrawal",
-    description: "Withdrawal to Bank Account",
-    amount: "-$500.00",
-    status: "pending",
-    statusLabel: "Pending",
-  },
-  {
-    id: 5,
-    date: "2024-01-11",
-    type: "purchase",
-    typeLabel: "Purchase",
-    description: "Purchased License Pack",
-    amount: "-$99.99",
-    status: "completed",
-    statusLabel: "Completed",
-  },
-  {
-    id: 6,
-    date: "2024-01-10",
-    type: "sale",
-    typeLabel: "Sale",
-    description: "License Sale: Trap Beat",
-    amount: "+$35.50",
-    status: "completed",
-    statusLabel: "Completed",
-  },
-  {
-    id: 7,
-    date: "2024-01-09",
-    type: "deposit",
-    typeLabel: "Deposit",
-    description: "Added Funds via PayPal",
-    amount: "+$50.00",
-    status: "failed",
-    statusLabel: "Failed",
-  },
-  {
-    id: 8,
-    date: "2024-01-08",
-    type: "purchase",
-    typeLabel: "Purchase",
-    description: "Purchased Beat: Midnight Dreams",
-    amount: "-$19.99",
-    status: "completed",
-    statusLabel: "Completed",
-  },
-]);
+// Fetch transactions from API
+const fetchTransactions = async () => {
+  loading.value = true;
+  try {
+    const data = await walletService.getTransactions(1000, 0);
+
+    // Map API response to display format
+    transactions.value = (data || []).map((tx) => {
+      const isCredit = tx.type === "credit";
+      return {
+        id: tx.id,
+        date: new Date(tx.createdAt).toLocaleDateString("en-US"),
+        type: isCredit ? "deposit" : "withdrawal",
+        typeLabel: isCredit ? "Deposit" : "Withdrawal",
+        description: tx.description,
+        amount: `${isCredit ? "+" : "-"}$${Math.abs(tx.amount).toFixed(2)}`,
+        status: "completed",
+        statusLabel: "Completed",
+        reference: tx.reference,
+      };
+    });
+  } catch (error) {
+    console.error("Failed to fetch transactions:", error);
+    transactions.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
 
 const filteredTransactions = computed(() => {
   return transactions.value.filter((tx) => {
@@ -288,4 +261,12 @@ const filteredTransactions = computed(() => {
     return true;
   });
 });
+
+const paginatedTransactions = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  return filteredTransactions.value.slice(start, end);
+});
+
+onMounted(fetchTransactions);
 </script>

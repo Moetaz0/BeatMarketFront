@@ -4,7 +4,6 @@ import SignUp from "../views/SignUp.vue";
 import ForgotPassword from "../views/ForgotPassword.vue";
 import Verify from "../views/verificationCode.vue";
 import Home from "../views/Home.vue";
-import Musicians from "../views/Musicians.vue";
 import Tracks from "../views/Tracks.vue";
 import Settings from "../views/Settings.vue";
 import Privacy from "../views/Privacy.vue";
@@ -15,7 +14,7 @@ import Cart from "../views/Cart.vue";
 import Wallet from "../views/Wallet.vue";
 import Transactions from "../views/Transactions.vue";
 import Purchases from "../views/Purchases.vue";
-import Support from "../views/Support.vue";
+import AdminDashboard from "../components/AdminDashboard.vue";
 // TODO: Create Upload.vue component
 // import Upload from "../views/Upload.vue";
 
@@ -68,12 +67,7 @@ const routes = [
     component: () => import("../views/MyBeats.vue"),
     meta: { requiresAuth: true },
   },
-  {
-    path: "/musicians",
-    component: Musicians,
-    name: "Musicians",
-    meta: { requiresAuth: true },
-  },
+
   {
     path: "/settings",
     component: Settings,
@@ -103,10 +97,10 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
-    path: "/support",
-    component: Support,
-    name: "Support",
-    meta: { requiresAuth: true },
+    path: "/admin",
+    component: AdminDashboard,
+    name: "AdminDashboard",
+    meta: { requiresAuth: true, requiresAdmin: true },
   },
 ];
 
@@ -122,8 +116,16 @@ router.beforeEach((to, from, next) => {
     sessionStorage.getItem("access_token")
   );
 
+  // Get user role from localStorage (set during login)
+  const userRole =
+    localStorage.getItem("user_role") || sessionStorage.getItem("user_role");
+  const isAdmin = userRole === "ROLE_ADMIN" || userRole === "Admin";
+
   if (to.meta.requiresAuth && !isLoggedIn) {
-    // Redirect to home if trying to access protected route
+    // Redirect to home if trying to access protected route without login
+    next({ name: "Home" });
+  } else if (to.meta.requiresAdmin && !isAdmin) {
+    // Redirect to home if trying to access admin route without admin role
     next({ name: "Home" });
   } else if ((to.name === "Login" || to.name === "SignUp") && isLoggedIn) {
     // Redirect to home if already logged in and trying to access auth pages

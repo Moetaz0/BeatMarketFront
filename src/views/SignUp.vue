@@ -1,4 +1,10 @@
 <template>
+  <ErrorToast
+    :message="errorMessage"
+    :show="showError"
+    @close="showError = false"
+  />
+
   <div
     class="min-h-screen bg-[rgba(20,0,0,0.88)] backdrop-blur-xl bg-fixed relative overflow-hidden flex flex-col"
   >
@@ -105,11 +111,27 @@
 import { ref } from "vue";
 import authService from "../services/authService"; // adjust path if needed
 import { useRouter } from "vue-router";
+import ErrorToast from "@/components/ErrorToast.vue";
 
 const name = ref("");
 const email = ref("");
 const password = ref("");
 const router = useRouter();
+
+const showError = ref(false);
+const errorMessage = ref("");
+
+const toastError = (message) => {
+  errorMessage.value = message;
+  showError.value = false;
+  setTimeout(() => {
+    showError.value = true;
+  }, 0);
+  setTimeout(() => {
+    showError.value = false;
+  }, 4000);
+};
+
 const signup = async () => {
   try {
     const response = await authService.register({
@@ -124,7 +146,7 @@ const signup = async () => {
     const errorMessage =
       err.response?.data?.error || err.message || "Signup failed.";
     console.error("Signup error:", errorMessage);
-    alert(errorMessage);
+    toastError(errorMessage);
   }
 };
 </script>

@@ -101,6 +101,8 @@ export const useCartStore = () => {
         cover: beat.cover,
         fileUrl: beat.fileUrl,
         licenseName: beat.licenseName,
+        licenseId: beat.licenseId || beat.license?.id || null,
+        quantity: 1,
         addedAt: new Date().toISOString(),
       });
       localStorage.setItem("cart", JSON.stringify(cartState.items));
@@ -116,6 +118,11 @@ export const useCartStore = () => {
     return cartState.items.some((item) => item.id === beatId);
   };
 
+  const clearCart = () => {
+    cartState.items = [];
+    localStorage.setItem("cart", JSON.stringify([]));
+  };
+
   const cartItems = computed(() => cartState.items);
   const cartCount = computed(() => cartState.items.length);
 
@@ -123,6 +130,7 @@ export const useCartStore = () => {
     addToCart,
     removeFromCart,
     isInCart,
+    clearCart,
     cartItems,
     cartCount,
   };

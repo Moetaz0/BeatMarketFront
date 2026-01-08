@@ -557,6 +557,11 @@ const loadProfile = async () => {
       profilePicture: profile.profilePicture || "",
     };
 
+    // Store user role if available
+    if (profile.role) {
+      localStorage.setItem("user_role", profile.role);
+    }
+
     // Set preview if profile picture exists
     if (profile.profilePicture) {
       profilePicturePreview.value = profile.profilePicture;

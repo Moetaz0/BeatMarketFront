@@ -42,9 +42,6 @@
         {{ title }}
       </h3>
       <p class="text-gray-400 text-sm mb-3">by {{ producer }}</p>
-      <p v-if="licenseName" class="text-gray-500 text-xs mb-3">
-        License: {{ licenseName }}
-      </p>
 
       <div class="flex items-center justify-between">
         <span
@@ -70,16 +67,14 @@
           <button
             v-if="isYours"
             @click.stop="handleEdit"
-            class="hover:text-white transition-colors duration-200 hover:text-red-400 font-medium"
+            class="transition-colors duration-200 hover:text-red-400 font-medium"
           >
             Edit
           </button>
           <button
             v-else
             class="hover:text-white transition-colors duration-200"
-          >
-            License
-          </button>
+          ></button>
         </div>
       </div>
     </div>
@@ -138,9 +133,17 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isOwned: {
+    type: Boolean,
+    default: false,
+  },
   fileUrl: {
     type: String,
     default: "",
+  },
+  producerId: {
+    type: Number,
+    default: null,
   },
 });
 
@@ -196,6 +199,8 @@ const handleClick = () => {
     cover: props.cover || fallbackCover,
     fileUrl: props.fileUrl,
     isYours: props.isYours,
+    isOwned: props.isOwned || props.isYours,
+    producerId: props.producerId || null,
   });
 };
 

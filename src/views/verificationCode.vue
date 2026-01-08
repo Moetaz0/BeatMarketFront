@@ -1,4 +1,10 @@
 <template>
+  <ErrorToast
+    :message="errorMessage"
+    :show="showError"
+    @close="showError = false"
+  />
+
   <div
     class="min-h-screen bg-[rgba(20,0,0,0.88)] backdrop-blur-xl bg-fixed relative overflow-hidden flex flex-col"
   >
@@ -162,6 +168,7 @@ import { ref, computed } from "vue";
 import authService from "../services/authService";
 import { useRoute, useRouter } from "vue-router";
 import { defineProps } from "vue";
+import ErrorToast from "@/components/ErrorToast.vue";
 const props = defineProps({
   email: {
     type: String,
@@ -172,6 +179,20 @@ const props = defineProps({
 const code = ref("");
 const showModal = ref(false);
 const isLoading = ref(false);
+
+const showError = ref(false);
+const errorMessage = ref("");
+
+const toastError = (message) => {
+  errorMessage.value = message;
+  showError.value = false;
+  setTimeout(() => {
+    showError.value = true;
+  }, 0);
+  setTimeout(() => {
+    showError.value = false;
+  }, 4000);
+};
 const route = useRoute();
 const router = useRouter();
 // Prefer prop from router config, but fall back to query/params/state
@@ -185,11 +206,11 @@ const email = computed(
 );
 const verifyCode = async () => {
   if (!code.value) {
-    alert("Please enter the verification code.");
+    toastError("Please enter the verification code.");
     return;
   }
   if (!email.value) {
-    alert(
+    toastError(
       "Missing email. Open the verification link from your email or return to Forgot Password."
     );
     return;
@@ -217,7 +238,7 @@ const verifyCode = async () => {
     }, 2500);
   } catch (err) {
     console.error("Verification error:", err.response?.data || err.message);
-    alert(
+    toastError(
       err.response?.data?.message || "Invalid or expired verification code."
     );
   } finally {

@@ -92,7 +92,7 @@
               <!-- Phone Number Section -->
               <div>
                 <label
-                  class="block text-white font-bold text-xs mb-1.5 flex items-center gap-2"
+                  class="flex items-center gap-2 text-white font-bold text-xs mb-1.5"
                 >
                   <span class="text-red-400">●</span>
                   Phone Number
@@ -111,7 +111,7 @@
               <!-- Profile Picture Section -->
               <div>
                 <label
-                  class="block text-white font-bold text-xs mb-2 flex items-center gap-2"
+                  class="flex items-center gap-2 text-white font-bold text-xs mb-2"
                 >
                   <span class="text-red-400">●</span>
                   Profile Photo

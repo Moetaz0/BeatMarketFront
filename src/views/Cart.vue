@@ -1,4 +1,11 @@
 <template>
+  <SuccessToast :message="successMessage" :show="showSuccess" />
+  <ErrorToast
+    :message="errorMessage"
+    :show="showError"
+    @close="showError = false"
+  />
+
   <div class="min-h-screen bg-black text-white pb-32">
     <Navbar />
 
@@ -64,13 +71,23 @@
                     <span class="text-2xl font-bold text-red-400">{{
                       item.price
                     }}</span>
-                    <span
-                      v-if="item.licenseName"
-                      class="text-sm bg-slate-700/60 text-gray-200 px-3 py-1 rounded"
-                    >
-                      {{ item.licenseName }}
-                    </span>
                   </div>
+
+                  <!-- License Dropdown -->
+                  <select
+                    :value="licenseSelections[item.id]?.id || ''"
+                    @change="handleLicenseChange(item.id, $event)"
+                    class="w-full bg-gray-800 border border-gray-500 text-white rounded px-3 py-2 text-sm focus:outline-none focus:border-red-500 transition mb-4 cursor-pointer"
+                  >
+                    <option value="">-- Select License --</option>
+                    <option
+                      v-for="license in licenses"
+                      :key="license.id"
+                      :value="license.id"
+                    >
+                      {{ license.name }}
+                    </option>
+                  </select>
 
                   <button
                     @click="cartStore.removeFromCart(item.id)"
@@ -111,9 +128,10 @@
 
             <button
               @click="checkout"
+              :disabled="isCheckingOut"
               class="w-full bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-red-500/30 mb-3"
             >
-              Proceed to Checkout
+              {{ isCheckingOut ? "Processing..." : "Proceed to Checkout" }}
             </button>
 
             <router-link
@@ -136,14 +154,83 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useCartStore } from "../../store";
 import Navbar from "../components/Navbar.vue";
+import SuccessToast from "@/components/SuccessToast.vue";
+import ErrorToast from "@/components/ErrorToast.vue";
+import licenseService from "@/services/licenseService";
+import orderService from "@/services/orderService";
 
 const cartStore = useCartStore();
 
+const showSuccess = ref(false);
+const successMessage = ref("");
+
+const showError = ref(false);
+const errorMessage = ref("");
+
+const isCheckingOut = ref(false);
+const licenses = ref([]);
+const isLoadingLicenses = ref(false);
+const licenseSelections = ref({}); // Map beatId -> { id, name, ...license object }
+
+const toastSuccess = (message) => {
+  successMessage.value = message;
+  showSuccess.value = false;
+  setTimeout(() => {
+    showSuccess.value = true;
+  }, 0);
+  setTimeout(() => {
+    showSuccess.value = false;
+  }, 3100);
+};
+
+const toastError = (message) => {
+  errorMessage.value = message;
+  showError.value = false;
+  setTimeout(() => {
+    showError.value = true;
+  }, 0);
+  setTimeout(() => {
+    showError.value = false;
+  }, 4000);
+};
+
+const fetchLicenses = async () => {
+  isLoadingLicenses.value = true;
+  try {
+    const data = await licenseService.getAllLicenses();
+    licenses.value = data || [];
+  } catch (error) {
+    console.error("[fetchLicenses] failed", error);
+    toastError("Failed to load license types");
+  } finally {
+    isLoadingLicenses.value = false;
+  }
+};
+
+onMounted(() => {
+  fetchLicenses();
+});
+
+const handleLicenseChange = (beatId, event) => {
+  const licenseId = event.target.value;
+  if (!licenseId) {
+    delete licenseSelections.value[beatId];
+    return;
+  }
+
+  const selectedLicense = licenses.value.find(
+    (l) => l.id === parseInt(licenseId)
+  );
+  if (selectedLicense) {
+    licenseSelections.value[beatId] = selectedLicense;
+  }
+};
+
 const subtotal = computed(() => {
-  return cartStore.cartItems
+  return cartStore.cartItems.value
     .reduce((sum, item) => {
       const price = parseFloat(item.price.replace("$", ""));
       return sum + price;
@@ -151,8 +238,73 @@ const subtotal = computed(() => {
     .toFixed(2);
 });
 
-const checkout = () => {
-  // TODO: Implement checkout functionality
-  alert("Checkout coming soon! Total: $" + subtotal.value);
+const checkout = async () => {
+  if (isCheckingOut.value) return;
+
+  const itemsInCart = cartStore.cartItems.value;
+  if (!itemsInCart || itemsInCart.length === 0) {
+    toastError("Your cart is empty.");
+    return;
+  }
+
+  // Check if any items need license selection
+  const itemsNeedingLicense = itemsInCart.filter(
+    (item) => !licenseSelections.value[item.id]
+  );
+
+  if (itemsNeedingLicense.length > 0) {
+    toastError(
+      `Please select a license for: ${itemsNeedingLicense
+        .map((i) => i.title)
+        .join(", ")}`
+    );
+    return;
+  }
+
+  isCheckingOut.value = true;
+  try {
+    const items = itemsInCart.map((item) => ({
+      beatId: item.id,
+      quantity: item.quantity || 1,
+      licenseId: licenseSelections.value[item.id].id,
+    }));
+
+    console.log("[checkout] sending items", items);
+
+    const result = await orderService.checkout(items);
+    toastSuccess(result?.message || "Checkout successful");
+    cartStore.clearCart();
+    licenseSelections.value = {}; // Reset selections after successful checkout
+  } catch (error) {
+    const data = error?.response?.data;
+    console.error("[checkout] failed", {
+      status: error?.response?.status,
+      data,
+      message: error?.message,
+    });
+
+    const status = error?.response?.status;
+    let message =
+      data?.error || data?.message || error?.message || "Checkout failed";
+
+    // Friendlier message for server errors
+    if (status >= 500) {
+      message =
+        data?.error ||
+        "Server error while processing checkout. Please try again.";
+    }
+
+    // Append wallet info when controller provides it
+    if (
+      typeof data?.balance !== "undefined" &&
+      typeof data?.total !== "undefined"
+    ) {
+      message = `${message} (Balance: $${data.balance}, Total: $${data.total})`;
+    }
+
+    toastError(message);
+  } finally {
+    isCheckingOut.value = false;
+  }
 };
 </script>

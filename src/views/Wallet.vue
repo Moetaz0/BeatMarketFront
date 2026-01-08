@@ -1,12 +1,53 @@
 <template>
+  <SuccessToast :message="successMessage" :show="showSuccess" />
+  <ErrorToast
+    :message="errorMessage"
+    :show="showError"
+    @close="showError = false"
+  />
+
   <div class="min-h-screen bg-black text-white">
     <Navbar />
 
-    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <!-- Full-page loading state -->
+    <div v-if="loading" class="flex items-center justify-center py-16 px-4">
+      <div class="text-center">
+        <svg
+          class="animate-spin h-8 w-8 text-red-600 mx-auto mb-4"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+          ></path>
+        </svg>
+        <p class="text-gray-300">Loading your wallet...</p>
+      </div>
+    </div>
+
+    <div v-else class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <!-- Header -->
       <div class="mb-8">
         <h1 class="text-3xl font-bold mb-2">Wallet</h1>
         <p class="text-gray-400">Manage your balance and payment methods</p>
+      </div>
+
+      <div
+        v-if="loadError"
+        class="mb-6 p-4 rounded-lg border border-gray-800 bg-gray-900"
+      >
+        <p class="text-red-400 text-sm">{{ loadError }}</p>
       </div>
 
       <!-- Balance Card -->
@@ -53,7 +94,7 @@
         <div class="flex items-center justify-between mb-6">
           <h3 class="text-xl font-semibold">Payment Methods</h3>
           <button
-            @click="showAddPaymentModal = true"
+            @click="openAddPaymentModal"
             class="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-sm font-semibold transition"
           >
             + Add Payment Method
@@ -246,35 +287,15 @@
         <div class="space-y-4 mb-6">
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-2">
-              Card Number
+              Card Details
             </label>
-            <input
-              type="text"
-              placeholder="4111 1111 1111 1111"
-              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-600"
-            />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                Expiry
-              </label>
-              <input
-                type="text"
-                placeholder="MM/YY"
-                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-600"
-              />
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-300 mb-2">
-                CVV
-              </label>
-              <input
-                type="text"
-                placeholder="123"
-                class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-red-600"
-              />
-            </div>
+            <div
+              id="card-element"
+              class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-white"
+            ></div>
+            <p v-if="cardError" class="text-red-400 text-sm mt-2">
+              {{ cardError }}
+            </p>
           </div>
         </div>
         <div class="flex gap-3">
@@ -286,9 +307,10 @@
           </button>
           <button
             @click="addPaymentMethod"
-            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition"
+            :disabled="isProcessing"
+            class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition disabled:opacity-50"
           >
-            Add
+            {{ isProcessing ? "Processing..." : "Add" }}
           </button>
         </div>
       </div>
@@ -297,18 +319,49 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import Navbar from "@/components/Navbar.vue";
+import walletService from "@/services/walletService";
+import SuccessToast from "@/components/SuccessToast.vue";
+import ErrorToast from "@/components/ErrorToast.vue";
 
-const balance = ref(1250.5);
-const earnings = ref(450);
-const spent = ref(120);
-const totalTransactions = ref(24);
+const balance = ref(0);
+const earnings = ref(0);
+const spent = ref(0);
+const totalTransactions = ref(0);
+const loading = ref(true);
+const isProcessing = ref(false);
+const loadError = ref("");
 
-const paymentMethods = ref([
-  { id: 1, type: "Visa", last4: "4242", default: true },
-  { id: 2, type: "Mastercard", last4: "5555", default: false },
-]);
+const showSuccess = ref(false);
+const successMessage = ref("");
+
+const showError = ref(false);
+const errorMessage = ref("");
+
+const toastSuccess = (message) => {
+  successMessage.value = message;
+  showSuccess.value = false;
+  setTimeout(() => {
+    showSuccess.value = true;
+  }, 0);
+  setTimeout(() => {
+    showSuccess.value = false;
+  }, 3100);
+};
+
+const toastError = (message) => {
+  errorMessage.value = message;
+  showError.value = false;
+  setTimeout(() => {
+    showError.value = true;
+  }, 0);
+  setTimeout(() => {
+    showError.value = false;
+  }, 4000);
+};
+
+const paymentMethods = ref([]);
 
 const showWithdrawModal = ref(false);
 const showDepositModal = ref(false);
@@ -318,32 +371,288 @@ const withdrawAmount = ref("");
 const depositAmount = ref("");
 const selectedPaymentMethod = ref("");
 
-const processWithdraw = () => {
-  if (withdrawAmount.value && selectedPaymentMethod.value) {
-    balance.value -= parseFloat(withdrawAmount.value);
+// Stripe related
+let stripe = null;
+let elements = null;
+let cardElement = null;
+const cardError = ref("");
+
+const loadStripeScript = () => {
+  if (window.Stripe) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    // Avoid injecting the script multiple times
+    const existing = document.querySelector(
+      'script[src="https://js.stripe.com/v3/"]'
+    );
+    if (existing) {
+      existing.addEventListener("load", () => resolve());
+      existing.addEventListener("error", () =>
+        reject(new Error("Failed to load Stripe.js"))
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://js.stripe.com/v3/";
+    script.async = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Stripe.js"));
+    document.head.appendChild(script);
+  });
+};
+
+const ensureStripeReady = async () => {
+  await loadStripeScript();
+  await initStripe();
+  if (!stripe || !elements) {
+    throw new Error(
+      "Stripe is not initialized. Check VITE_STRIPE_PUBLISHABLE_KEY and restart Vite."
+    );
+  }
+};
+
+// Initialize Stripe
+const initStripe = async () => {
+  // Idempotent: do not recreate Stripe/Elements once initialized
+  if (stripe && elements) return;
+
+  if (window.Stripe) {
+    const publishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+    if (!publishableKey) {
+      console.error(
+        "Missing Stripe publishable key. Set VITE_STRIPE_PUBLISHABLE_KEY in your .env file."
+      );
+      return;
+    }
+
+    stripe = window.Stripe(publishableKey);
+    elements = stripe.elements();
+  } else {
+    console.error("Stripe.js not loaded");
+  }
+};
+
+// Mount card element when modal opens
+const mountCardElement = () => {
+  if (elements) {
+    // If we somehow have an old element (e.g., hot reload), recreate it
+    if (cardElement) {
+      try {
+        cardElement.unmount();
+      } catch (e) {}
+      cardElement = null;
+    }
+
+    cardElement = elements.create("card", {
+      style: {
+        base: {
+          color: "#ffffff",
+          fontFamily: "system-ui, -apple-system, sans-serif",
+          fontSize: "14px",
+          backgroundColor: "#1f2937",
+          "::placeholder": {
+            color: "#9ca3af",
+          },
+        },
+        invalid: {
+          color: "#ef4444",
+        },
+      },
+    });
+    cardElement.mount("#card-element");
+  }
+};
+
+// Fetch wallet data
+const fetchWalletData = async () => {
+  loading.value = true;
+  loadError.value = "";
+  try {
+    const [walletRes, statsRes, pmRes] = await Promise.allSettled([
+      walletService.getWallet(),
+      walletService.getStats(),
+      walletService.listPaymentMethods(),
+    ]);
+
+    if (walletRes.status === "fulfilled") {
+      balance.value = walletRes.value?.balance || 0;
+    } else {
+      loadError.value = "Failed to load wallet balance.";
+    }
+
+    if (statsRes.status === "fulfilled") {
+      earnings.value = statsRes.value?.earnings || 0;
+      spent.value = statsRes.value?.spent || 0;
+      totalTransactions.value = statsRes.value?.totalTransactions || 0;
+    } else {
+      loadError.value = loadError.value
+        ? loadError.value
+        : "Failed to load wallet stats.";
+    }
+
+    if (pmRes.status === "fulfilled") {
+      paymentMethods.value = pmRes.value || [];
+    } else {
+      loadError.value = loadError.value
+        ? loadError.value
+        : "Failed to load payment methods.";
+    }
+  } catch (error) {
+    console.error("Failed to fetch wallet data:", error);
+    loadError.value = "Failed to load wallet data.";
+  } finally {
+    loading.value = false;
+  }
+};
+
+const processWithdraw = async () => {
+  if (!withdrawAmount.value || !selectedPaymentMethod.value) {
+    toastError("Please fill in all fields");
+    return;
+  }
+
+  isProcessing.value = true;
+  try {
+    const result = await walletService.withdraw(
+      parseFloat(withdrawAmount.value),
+      selectedPaymentMethod.value
+    );
+    balance.value = result.balance;
     withdrawAmount.value = "";
     selectedPaymentMethod.value = "";
     showWithdrawModal.value = false;
+    toastSuccess("Withdrawal processed successfully!");
+  } catch (error) {
+    toastError(
+      "Withdrawal failed: " + (error.response?.data?.error || error.message)
+    );
+  } finally {
+    isProcessing.value = false;
   }
 };
 
-const processDeposit = () => {
-  if (depositAmount.value && selectedPaymentMethod.value) {
-    balance.value += parseFloat(depositAmount.value);
+const processDeposit = async () => {
+  if (!depositAmount.value || !selectedPaymentMethod.value) {
+    toastError("Please fill in all fields");
+    return;
+  }
+
+  isProcessing.value = true;
+  try {
+    const result = await walletService.deposit(
+      parseFloat(depositAmount.value),
+      selectedPaymentMethod.value
+    );
+    balance.value = result.balance;
     depositAmount.value = "";
     selectedPaymentMethod.value = "";
     showDepositModal.value = false;
+    toastSuccess("Deposit successful!");
+  } catch (error) {
+    toastError(
+      "Deposit failed: " + (error.response?.data?.error || error.message)
+    );
+  } finally {
+    isProcessing.value = false;
   }
 };
 
-const addPaymentMethod = () => {
-  showAddPaymentModal.value = false;
+const addPaymentMethod = async () => {
+  try {
+    await ensureStripeReady();
+    // Card element might not be mounted if the user clicked quickly
+    if (!cardElement) mountCardElement();
+  } catch (e) {
+    const message = e?.message || "Stripe is not initialized";
+    cardError.value = message;
+    toastError(message);
+    return;
+  }
+
+  if (!cardElement) {
+    cardError.value = "Card element failed to mount. Try reopening the modal.";
+    toastError(cardError.value);
+    return;
+  }
+
+  cardError.value = "";
+  isProcessing.value = true;
+
+  try {
+    // Create payment method from card element
+    const { paymentMethod, error } = await stripe.createPaymentMethod({
+      type: "card",
+      card: cardElement,
+    });
+
+    if (error) {
+      cardError.value = error.message;
+      isProcessing.value = false;
+      return;
+    }
+
+    if (!paymentMethod?.id) {
+      cardError.value = "Stripe did not return a paymentMethodId.";
+      isProcessing.value = false;
+      return;
+    }
+
+    // Send payment method ID to backend
+    const result = await walletService.addPaymentMethod(paymentMethod.id);
+
+    // Add to local list
+    paymentMethods.value.push(result);
+
+    // Clean up
+    cardElement.clear();
+    cardError.value = "";
+    showAddPaymentModal.value = false;
+    toastSuccess("Payment method added successfully!");
+  } catch (error) {
+    const apiError = error?.response?.data?.error;
+    cardError.value =
+      apiError || error?.message || "Failed to add payment method";
+    console.error("Add payment method failed:", error);
+    toastError("Error: " + cardError.value);
+  } finally {
+    isProcessing.value = false;
+  }
 };
 
-const removePaymentMethod = (id) => {
-  const index = paymentMethods.value.findIndex((m) => m.id === id);
-  if (index > -1) {
-    paymentMethods.value.splice(index, 1);
+const removePaymentMethod = async (id) => {
+  if (confirm("Are you sure you want to remove this payment method?")) {
+    try {
+      await walletService.removePaymentMethod(id);
+      paymentMethods.value = paymentMethods.value.filter((m) => m.id !== id);
+    } catch (error) {
+      toastError("Failed to remove payment method");
+    }
   }
+};
+
+onMounted(async () => {
+  // Start loading Stripe early (do not block wallet fetch)
+  loadStripeScript()
+    .then(initStripe)
+    .catch((e) => {
+      console.error(e);
+    });
+  fetchWalletData();
+});
+
+// Watch for modal opening to mount card element
+const openAddPaymentModal = () => {
+  showAddPaymentModal.value = true;
+  // Ensure Stripe is ready before mounting card element
+  setTimeout(async () => {
+    try {
+      await ensureStripeReady();
+      mountCardElement();
+    } catch (e) {
+      const message = e?.message || "Stripe is not initialized";
+      cardError.value = message;
+    }
+  }, 0);
 };
 </script>

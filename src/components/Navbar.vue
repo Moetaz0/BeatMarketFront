@@ -140,13 +140,16 @@
                 Transactions
               </router-link>
               <div class="border-b border-gray-700 my-1"></div>
+              <!-- Admin Dashboard (only for ROLE_ADMIN users) -->
               <router-link
-                to="/support"
-                class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
+                v-if="isAdmin"
+                to="/admin"
+                class="block px-4 py-2 text-sm text-blue-400 hover:bg-blue-900/30 hover:text-blue-300 transition font-medium"
                 @click="closeDropdown"
               >
-                Support
+                Admin Dashboard
               </router-link>
+              <div v-if="isAdmin" class="border-b border-gray-700 my-1"></div>
               <router-link
                 to="/settings"
                 class="block px-4 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition"
@@ -255,6 +258,12 @@ const defaultAvatar = ref(getRandomAvatar());
 const getUserInitial = computed(() => {
   const name = authStore.currentUser.value?.name || "U";
   return name.charAt(0).toUpperCase();
+});
+
+const isAdmin = computed(() => {
+  const userRole =
+    localStorage.getItem("user_role") || sessionStorage.getItem("user_role");
+  return userRole === "ROLE_ADMIN" || userRole === "Admin";
 });
 
 const toggleDropdown = () => {

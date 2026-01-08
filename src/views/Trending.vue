@@ -48,9 +48,21 @@
         v-else
         class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
       >
-        <BeatCard v-for="beat in beats" :key="beat.id" v-bind="beat" />
+        <BeatCard
+          v-for="beat in beats"
+          :key="beat.id"
+          v-bind="beat"
+          @play="handleBeatPlay(beat.id)"
+        />
       </div>
     </div>
+
+    <!-- Music Player -->
+    <MusicPlayer
+      :current-beat="currentlyPlayingBeat"
+      :is-yours="currentlyPlayingBeat?.isOwned || false"
+      @close="currentlyPlayingBeat = null"
+    />
   </div>
 </template>
 
@@ -58,10 +70,13 @@
 import { ref, onMounted } from "vue";
 import Navbar from "@/components/Navbar.vue";
 import BeatCard from "@/components/BeatCard.vue";
+import MusicPlayer from "@/components/MusicPlayer.vue";
 import beatService from "@/services/beatService";
+import { useAuthStore } from "../../store";
 
 const beats = ref([]);
 const loading = ref(false);
+const currentlyPlayingBeat = ref(null);
 
 const fetchTrending = async () => {
   loading.value = true;
@@ -123,4 +138,30 @@ const fetchTrending = async () => {
 };
 
 onMounted(fetchTrending);
+
+const handleBeatPlay = (beatId) => {
+  const authStore = useAuthStore();
+  const beat = beats.value.find((b) => b.id === beatId);
+
+  if (!beat) return;
+
+  // Check if user owns this beat (is the producer)
+  const isOwned = authStore.currentUser.value?.username === beat.producer;
+
+  console.log("Playing beat:", beat.title, "Owned:", isOwned);
+
+  currentlyPlayingBeat.value = {
+    id: beat.id,
+    title: beat.title,
+    producer: beat.producer,
+    cover: beat.cover,
+    fileUrl: beat.fileUrl,
+    price: beat.price,
+    licenseName: beat.licenseName,
+    views: beat.views,
+    plays: beat.plays,
+    isOwned: isOwned, // Flag to indicate user owns this beat
+    isPurchased: isOwned, 
+  };
+};
 </script>
